@@ -1,6 +1,10 @@
 name: ML-07 Execute Baseline Notebook
 
 on:
+  push:
+    paths:
+      - "work/notebooks/w04_baseline_score.ipynb"
+      - ".github/workflows/ml07-execute.yml"
   workflow_dispatch:
 
 permissions:
@@ -40,3 +44,11 @@ jobs:
             --output /tmp/w04_baseline_score_executed.ipynb \
             --ExecutePreprocessor.timeout=300
           mv /tmp/w04_baseline_score_executed.ipynb work/notebooks/w04_baseline_score.ipynb
+
+      - name: Commit executed notebook
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add work/notebooks/w04_baseline_score.ipynb
+          git diff --cached --quiet || git commit -m "chore: execute ML-07 baseline notebook"
+          git push
