@@ -1,0 +1,50 @@
+name: Execute ML-08 notebook
+
+on:
+  push:
+    paths:
+      - "work/notebooks/w05_model.ipynb"
+      - ".github/workflows/run-ml08.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy scikit-learn jupyter nbconvert
+
+      - name: Download public starter dataset
+        run: |
+          mkdir -p data/raw
+          curl -L --fail --retry 3 \
+            https://raw.githubusercontent.com/flyrank-bih/flyrank-ml-internship-starter/main/data/raw/content_refresh_anonymized.csv \
+            -o data/raw/content_refresh_anonymized.csv
+
+      - name: Execute notebook
+        run: |
+          jupyter nbconvert --to notebook --execute work/notebooks/w05_model.ipynb \
+            --output w05_model_executed.ipynb \
+            --ExecutePreprocessor.timeout=900
+          mv w05_model_executed.ipynb work/notebooks/w05_model.ipynb
+
+      - name: Commit executed notebook
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add work/notebooks/w05_model.ipynb
+          git diff --cached --quiet || git commit -m "Execute ML-08 notebook"
+          git push
