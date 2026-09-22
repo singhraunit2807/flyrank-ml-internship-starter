@@ -39,7 +39,7 @@ jobs:
           jupyter nbconvert --to notebook --execute work/notebooks/w05_model.ipynb \
             --output w05_model_executed.ipynb \
             --ExecutePreprocessor.timeout=900
-          mv w05_model_executed.ipynb work/notebooks/w05_model.ipynb
+          mv work/notebooks/w05_model_executed.ipynb work/notebooks/w05_model.ipynb
 
       - name: Commit executed notebook
         run: |
