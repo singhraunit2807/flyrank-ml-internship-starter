@@ -34,6 +34,15 @@ jobs:
       - name: Execute ML-10 notebook
         run: |
           jupyter nbconvert --to notebook --execute --ExecutePreprocessor.timeout=1200 --inplace work/notebooks/w07_action_playbook.ipynb
+      - name: Collect generated metrics
+        run: |
+          mkdir -p work
+          if [ ! -f work/ml10_metrics.json ]; then
+            found=$(find . -name ml10_metrics.json -print -quit)
+            if [ -n "$found" ]; then cp "$found" work/ml10_metrics.json; fi
+          fi
+          test -f work/ml10_metrics.json
+
       - name: Commit executed notebook and metrics
         run: |
           git config user.name "github-actions[bot]"
