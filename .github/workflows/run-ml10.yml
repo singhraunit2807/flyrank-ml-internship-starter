@@ -36,6 +36,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add work/notebooks/w07_action_playbook.ipynb work/metrics/ml10_metrics.json
+          git add work/notebooks/w07_action_playbook.ipynb
+git add -f work/metrics/ml10_metrics.json
           git diff --cached --quiet || git commit -m "Complete ML-10 content action playbook"
           git push
