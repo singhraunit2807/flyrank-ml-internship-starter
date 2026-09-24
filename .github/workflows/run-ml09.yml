@@ -1,0 +1,38 @@
+name: Run ML-09 Validation Audit
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "work/notebooks/w06_validation_audit.ipynb"
+      - ".github/workflows/run-ml09.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  run-ml09:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy scikit-learn nbformat nbconvert
+      - name: Download public teaching dataset
+        run: |
+          mkdir -p data/raw
+          curl -L --fail -o data/raw/content_refresh_anonymized.csv https://raw.githubusercontent.com/flyrank-bih/flyrank-ml-internship-starter/main/data/raw/content_refresh_anonymized.csv
+      - name: Execute ML-09 notebook
+        run: |
+          jupyter nbconvert --to notebook --execute --ExecutePreprocessor.timeout=1200 --inplace work/notebooks/w06_validation_audit.ipynb
+      - name: Commit executed notebook
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add work/notebooks/w06_validation_audit.ipynb
+          git diff --cached --quiet || git commit -m "Complete ML-09 validation and claim audit"
+          git push
