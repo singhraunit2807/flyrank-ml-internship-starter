@@ -1,0 +1,16 @@
+{
+  "rows_used": 30000,
+  "clients": 32,
+  "train_clients": 25,
+  "test_clients": 7,
+  "client_overlap": 0,
+  "decline_base_rate": 0.5421,
+  "queue_rows": 6163,
+  "high_risk_top_10": 10,
+  "automation_allowed": false,
+  "human_review_required": true,
+  "model": "RandomForestClassifier",
+  "n_estimators": 300,
+  "min_samples_leaf": 5,
+  "random_state": 42
+}
