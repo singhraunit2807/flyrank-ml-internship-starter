@@ -5,56 +5,126 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Predicting Content Decline with Client-Held-Out Validation</title>
 <style>
-body{font-family:Arial,Helvetica,sans-serif;line-height:1.65;color:#18252a;max-width:900px;margin:0 auto;padding:40px 24px;background:#fff}
-h1{font-size:34px;line-height:1.15;margin-bottom:8px} h2{margin-top:42px;color:#12383d}
-.meta{color:#53656b;margin-bottom:28px}.box{background:#f4f8f7;padding:18px 20px;border-radius:10px;margin:20px 0}
-table{border-collapse:collapse;width:100%;margin:18px 0}th,td{border:1px solid #ccd7d9;padding:10px;text-align:left}th{background:#edf3f2}
-code{background:#eef2f2;padding:2px 5px;border-radius:4px}.footer{margin-top:50px;padding-top:20px;border-top:1px solid #ddd;color:#657276}
-</style></head>
+body{font-family:Arial,Helvetica,sans-serif;line-height:1.65;color:#18252a;max-width:960px;margin:0 auto;padding:40px 24px;background:#fff}
+h1{font-size:36px;line-height:1.15;margin-bottom:8px}h2{margin-top:46px;color:#12383d}h3{margin-top:28px}
+.meta{color:#53656b;margin-bottom:28px}.box{background:#f4f8f7;padding:20px 22px;border-radius:10px;margin:20px 0}
+.note{background:#fff8e8;border-left:4px solid #c28b20;padding:14px 16px;margin:18px 0}
+table{border-collapse:collapse;width:100%;margin:18px 0}th,td{border:1px solid #ccd7d9;padding:10px;text-align:left;vertical-align:top}th{background:#edf3f2}
+code{background:#eef2f2;padding:2px 5px;border-radius:4px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.card{border:1px solid #d7e0e1;border-radius:10px;padding:16px;background:#fff}
+svg{width:100%;height:auto;display:block;border:1px solid #e0e6e7;border-radius:8px;background:#fff}
+.small{font-size:14px;color:#5d6b70}.footer{margin-top:50px;padding-top:20px;border-top:1px solid #ddd;color:#657276}
+@media(max-width:700px){body{padding:24px 16px}h1{font-size:30px}.grid{grid-template-columns:1fr}}
+</style>
+</head>
 <body>
 <h1>Predicting Content Decline with Client-Held-Out Validation</h1>
-<div class="meta"><b>Raunit Singh</b> · Machine Learning · FlyRank ML Internship</div>
-<div class="box"><b>Abstract.</b> This paper asks whether page-level search and content signals can help identify content that is already associated with decline. The analysis uses an anonymized teaching dataset of 30,000 content rows from 32 clients and evaluates a Random Forest model using a client-grouped holdout so that test clients are completely unseen during training. A naive row split produced ROC AUC 0.763 and Average Precision 0.776, while the honest client-grouped split produced ROC AUC 0.600 and Average Precision 0.587. The gap shows why client overlap can make validation look more optimistic than a new-client test. The final output is used as a ranked review queue rather than an automated content decision system.</div>
+<div class="meta"><b>Raunit Singh</b> · Machine Learning · FlyRank ML Internship · ML-11 Capstone</div>
 
-<h2>1. Research Question and Problem Statement</h2>
+<div class="box"><b>Abstract.</b> This paper asks whether page-level search and content signals can help identify content that is already associated with decline. The executed analysis uses the anonymized FlyRank teaching dataset: 30,000 content rows from 32 clients. A Random Forest is evaluated with a client-grouped holdout so test clients are completely unseen during training. A naive row split produced ROC AUC 0.763 and Average Precision 0.776, while the client-grouped split produced ROC AUC 0.600 and Average Precision 0.587. The main practical output is a ranked human-review queue, not an automatic content decision system.</div>
+
+<h2>1. Introduction and Problem Statement</h2>
 <p>The practical question is: <b>Can a machine-learning model help identify pages that deserve human review for decline risk, while still being evaluated honestly across clients?</b></p>
-<p>This is a decision-support problem. The goal is not to claim that the model has discovered Google's ranking algorithm or that a particular page characteristic causes decline. The model is used to prioritize pages for investigation.</p>
-<p>The methodological question is how much measured performance changes when validation is done on completely unseen clients instead of randomly splitting individual rows.</p>
+<p>This is a decision-support problem. The goal is not to claim that the model has discovered Google's ranking algorithm, nor that a particular page characteristic causes decline. The model is used to prioritize pages for investigation and to make the review process more consistent.</p>
+<p>The methodological question is equally important: how much does measured performance change when validation is performed on completely unseen clients instead of randomly splitting individual rows?</p>
 
 <h2>2. Data</h2>
-<p>The executed analysis used the anonymized FlyRank teaching dataset after the same filtering used in the earlier model work: pages with positive 90-day impressions and content age of at least 90 days were retained, duplicate content IDs were removed, and the decline label was derived from <code>trend_direction</code>.</p>
-<table><tr><th>Item</th><th>Value</th></tr><tr><td>Rows used</td><td>30,000</td></tr><tr><td>Clients</td><td>32</td></tr><tr><td>Decline base rate</td><td>54.21%</td></tr><tr><td>Held-out test clients</td><td>7</td></tr><tr><td>Client overlap</td><td>0</td></tr></table>
-<p>The label is <code>is_declining_label = (trend_direction == "down")</code>. Because the label comes from <code>trend_direction</code>, target-derived fields are excluded from model features.</p>
-<p><b>Data-scope note:</b> this repository contains the executed analysis on the available anonymized teaching slice. It does not claim that this notebook independently processed the full 79-million-row production warehouse.</p>
+<p>The paper uses the repository's bundled anonymized teaching dataset rather than claiming a new independent run over the full hosted warehouse. The starter repository describes this bundled release as approximately 30,000 pseudonymized pages with 44 columns. The wider internship materials also describe a separate full release of roughly 79 million hosted rows, accessed through the DuckDB/Hugging Face workflow. This capstone does not claim to have independently processed that full warehouse.</p>
+<table>
+<tr><th>Data item</th><th>What was used in this paper</th></tr>
+<tr><td>Release / scope</td><td>Bundled anonymized teaching slice available in the starter workflow</td></tr>
+<tr><td>Source table/file</td><td><code>data/raw/content_refresh_anonymized.csv</code> in the starter workflow</td></tr>
+<tr><td>Rows</td><td>30,000</td></tr>
+<tr><td>Columns in source</td><td>44</td></tr>
+<tr><td>Clients</td><td>32</td></tr>
+<tr><td>Decline base rate</td><td>54.21%</td></tr>
+<tr><td>Filtering used in the model work</td><td>Positive 90-day impressions; content age at least 90 days; duplicate content IDs removed</td></tr>
+<tr><td>Label</td><td><code>is_declining_label = (trend_direction == "down")</code></td></tr>
+</table>
+<p>The analysis therefore uses the 90-day impression window as part of the prepared feature set and the content-age filter described above. Private client names, private URLs, raw search queries, credentials, and other identifying information are not included in the paper.</p>
+
+<div class="note"><b>Public-safety and scope note:</b> the public paper contains aggregate results only. It does not expose client identities or private search information, and it does not represent the 79M-row hosted warehouse as if it had been independently processed here.</div>
 
 <h2>3. Methodology</h2>
-<p>The model uses page-level search, traffic, engagement, content-age, freshness, and categorical content signals. The excluded fields are <code>trend_direction</code>, <code>trend_pct</code>, <code>is_declining_label</code>, <code>content_id</code>, and <code>client_id</code>.</p>
-<p>The final model is a Random Forest classifier with 300 trees, <code>min_samples_leaf=5</code>, balanced class weighting, and <code>random_state=42</code>.</p>
-<p>The primary evaluation keeps all rows belonging to a client together. Twenty percent of clients are held out for testing. A naive random row split is shown only as a comparison because it allowed 31 clients to appear in both training and testing data.</p>
+<h3>Label and leakage control</h3>
+<p>The target is derived from <code>trend_direction</code>. Therefore <code>trend_direction</code> and <code>trend_pct</code> are excluded from model features. The generated label itself, <code>is_declining_label</code>, is also excluded. Identifiers <code>content_id</code> and <code>client_id</code> are excluded because they are identifiers rather than predictive content signals and could create leakage or memorization.</p>
+
+<h3>Model</h3>
+<p>The final model is a Random Forest classifier with 300 trees, <code>min_samples_leaf=5</code>, <code>class_weight="balanced_subsample"</code>, and <code>random_state=42</code>. Features cover search, traffic, engagement, content-age, freshness, and categorical content signals.</p>
+
+<h3>Validation design</h3>
+<p>The primary validation keeps all rows belonging to a client together. Approximately 20% of clients are held out for testing. The seven test clients have <b>zero client overlap</b> with the training set. A naive random row split is shown only as a diagnostic comparison because 31 clients appeared on both sides.</p>
 
 <h2>4. Results</h2>
-<table><tr><th>Validation design</th><th>ROC AUC</th><th>Average Precision</th><th>Test rows</th><th>Test clients</th><th>Overlap</th></tr>
+<table>
+<tr><th>Validation design</th><th>ROC AUC</th><th>Average Precision</th><th>Test rows</th><th>Test clients</th><th>Client overlap</th></tr>
 <tr><td>Naive random row split</td><td>0.763</td><td>0.776</td><td>6,000</td><td>31</td><td>31</td></tr>
-<tr><td><b>Client-grouped split</b></td><td><b>0.600</b></td><td><b>0.587</b></td><td>6,163</td><td>7</td><td><b>0</b></td></tr></table>
-<p>The random split produces higher scores, but it is not a clean new-client test because the same clients occur on both sides. The client-grouped result is the main validation result for this study.</p>
+<tr><td><b>Client-grouped split</b></td><td><b>0.600</b></td><td><b>0.587</b></td><td>6,163</td><td>7</td><td><b>0</b></td></tr>
+</table>
+
+<div class="grid">
+<div class="card">
+<h3>ROC AUC</h3>
+<svg viewBox="0 0 520 300" role="img" aria-label="ROC AUC comparison">
+<line x1="80" y1="245" x2="475" y2="245" stroke="#777"/><line x1="80" y1="45" x2="80" y2="245" stroke="#777"/>
+<text x="80" y="270" font-size="14">0</text><text x="270" y="270" font-size="14">0.5</text><text x="460" y="270" font-size="14">1.0</text>
+<rect x="120" y="92" width="135" height="153" fill="#4d7778"/><rect x="300" y="125" width="135" height="120" fill="#8da6a7"/>
+<text x="155" y="82" font-size="18">0.763</text><text x="335" y="115" font-size="18">0.600</text>
+<text x="128" y="290" font-size="14">Random row</text><text x="302" y="290" font-size="14">Client holdout</text>
+</svg>
+<p class="small">Higher is better for discrimination, but the client-grouped score is the primary estimate because clients are unseen.</p>
+</div>
+<div class="card">
+<h3>Average Precision</h3>
+<svg viewBox="0 0 520 300" role="img" aria-label="Average Precision comparison">
+<line x1="80" y1="245" x2="475" y2="245" stroke="#777"/><line x1="80" y1="45" x2="80" y2="245" stroke="#777"/>
+<text x="80" y="270" font-size="14">0</text><text x="270" y="270" font-size="14">0.5</text><text x="460" y="270" font-size="14">1.0</text>
+<rect x="120" y="90" width="135" height="155" fill="#4d7778"/><rect x="300" y="128" width="135" height="117" fill="#8da6a7"/>
+<text x="155" y="80" font-size="18">0.776</text><text x="335" y="118" font-size="18">0.587</text>
+<text x="128" y="290" font-size="14">Random row</text><text x="302" y="290" font-size="14">Client holdout</text>
+</svg>
+<p class="small">Average Precision summarizes ranking quality for the positive class. The lower client-held-out result is the more relevant new-client estimate in this study.</p>
+</div>
+</div>
+
+<p>The random split gives higher scores, but it is not a clean new-client test because the same clients occur in both training and testing. The client-grouped result is therefore the main validation result used for interpretation.</p>
 
 <h2>5. Research Findings and Interpretation</h2>
-<h3>Content lifecycle</h3><p>The source analysis reports that growing pages were younger on average than declining pages, approximately 185 days versus 228 days, while average word count was nearly the same. This supports an observed association in that analysis; it does not establish that younger content causes growth.</p>
-<h3>Freshness</h3><p>The source analysis reports a 31–90 day freshness-window growth-to-decline ratio of 5.43:1 and a separate refreshed-versus-stale comparison for older content. These are observed cohort comparisons. Selection effects and other group differences cannot be ruled out from those comparisons alone.</p>
+<h3>Content lifecycle</h3>
+<p>The source analysis reports that growing pages were younger on average than declining pages, approximately 185 days versus 228 days, while average word count was nearly the same. This is an observed association in the analyzed cohort. It does not establish that younger content causes growth.</p>
+<h3>Freshness</h3>
+<p>The source analysis reports a 31–90 day freshness-window growth-to-decline ratio of 5.43:1 and a separate refreshed-versus-stale comparison for older content. These are observed cohort comparisons. Selection effects and other group differences cannot be ruled out from those comparisons alone.</p>
 
-<h2>6. Ranked Recommendations</h2>
-<p>The model output is turned into a review queue. Each page receives a decline-risk score, a reason code, a content archetype, and a recommended action.</p>
-<ul><li><b>Stale high-visibility page:</b> review whether a refresh is justified, then revalidate.</li><li><b>Ranking opportunity:</b> review search intent and on-page relevance.</li><li><b>Depth improvement candidate:</b> review content depth and topic coverage.</li><li><b>Refresh candidate:</b> check whether the page actually needs a freshness update.</li><li><b>Needs data review:</b> resolve missing or inconsistent signals first.</li><li><b>General decline-risk review:</b> carry out a normal human content review.</li></ul>
-<p>These recommendations are prioritisation aids, not automatic instructions.</p>
+<h2>6. Ranked Recommendations / Action Playbook</h2>
+<p>The model output is converted into a review queue. Each page can receive a decline-risk score, a reason code, a content archetype, and a recommended human-review action.</p>
+<table>
+<tr><th>Queue signal</th><th>Suggested human review</th></tr>
+<tr><td>Stale high-visibility page</td><td>Check whether a refresh is justified, then revalidate performance.</td></tr>
+<tr><td>Ranking opportunity</td><td>Review search intent, relevance, and on-page alignment.</td></tr>
+<tr><td>Depth improvement candidate</td><td>Review topic coverage and whether important information is missing.</td></tr>
+<tr><td>Refresh candidate</td><td>Check whether freshness work is actually supported by the page's context.</td></tr>
+<tr><td>Needs data review</td><td>Resolve missing or inconsistent signals before acting.</td></tr>
+<tr><td>General decline-risk review</td><td>Carry out a normal human content review before any change.</td></tr>
+</table>
+<p>These are prioritisation aids. They are not automatic instructions, and the paper does not claim measured financial ROI from the queue.</p>
 
 <h2>7. Limitations and Honest Framing</h2>
-<ol><li>The executed model evaluation is based on 30,000 anonymized rows, not an independent run over the full 79-million-row production warehouse.</li><li>The client-grouped test contains seven held-out clients.</li><li>Model scores indicate estimated class risk, not causation.</li><li>Research comparisons describe associations and cohort differences rather than causal effects.</li><li>The dataset does not provide real business costs, so the action queue does not claim measured financial ROI.</li><li>High-impact content changes require human review.</li></ol>
+<ol>
+<li>The executed model evaluation is based on 30,000 anonymized rows, not an independent run over the full hosted 79M-row warehouse.</li>
+<li>The client-grouped test contains seven held-out clients, so results should not be generalized to every possible future client without further validation.</li>
+<li>Model scores indicate estimated class risk, not causation.</li>
+<li>The research comparisons describe associations and cohort differences rather than causal effects.</li>
+<li>The dataset used here does not provide real business costs, so the action queue does not claim measured financial ROI.</li>
+<li>High-impact content changes require human review and post-change measurement.</li>
+<li>The random-split numbers are included to demonstrate the validation sensitivity, not as the primary new-client performance estimate.</li>
+</ol>
 
 <h2>8. Reproducibility</h2>
-<p>The work is organized in the GitHub repository. ML-08, ML-09, and ML-10 provide the model, validation, and action-playbook trail behind this paper. The primary validation setup is deterministic with <code>random_state=42</code>. The ML-10 workflow executed successfully and its self-check passed.</p>
+<p>The work is organized in the public repository. The executed capstone notebook is <a href="https://github.com/singhraunit2807/flyrank-ml-internship-starter/blob/main/work/notebooks/capstone.ipynb">work/notebooks/capstone.ipynb</a>. Earlier lane work is available in <a href="https://github.com/singhraunit2807/flyrank-ml-internship-starter">the repository</a>, including ML-08 modeling, ML-09 validation/leakage audit, and ML-10 action-playbook work. The ML-11 notebook execution workflow completed successfully in GitHub Actions.</p>
 
 <h2>9. Acknowledgements and Data Credit</h2>
-<p>This work was completed as part of the FlyRank ML Internship. The dataset and internship materials are credited to FlyRank. Data source: <a href="https://flyrank.ai">flyrank.ai</a>.</p>
+<p>Built on the FlyRank ML Internship dataset and internship materials. Data and internship credit: <a href="https://flyrank.ai">FlyRank</a>.</p>
 
-<div class="footer">Public-safe research artifact · Raunit Singh · FlyRank ML Internship</div>
-</body></html>
+<div class="footer">Public-safe research artifact · Raunit Singh · FlyRank ML Internship · This paper reports the executed teaching-slice analysis and keeps claims within the evidence available in the repository.</div>
+</body>
+</html>
